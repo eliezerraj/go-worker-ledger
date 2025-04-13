@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"context"
 	"sync"
 	"encoding/json"
@@ -14,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 
 	go_core_observ "github.com/eliezerraj/go-core/observability"
@@ -73,9 +73,9 @@ func (s *ServerWorker) Consumer(ctx context.Context, appServer *model.AppServer 
 											&infoTrace)
 	
 	if tp != nil {
-		tracer = tp.Tracer(appServer.InfoPod.PodName)
 		otel.SetTextMapPropagator(xray.Propagator{})
 		otel.SetTracerProvider(tp)
+		tracer = tp.Tracer(appServer.InfoPod.PodName)
 	}
 
 	// handle defer
@@ -111,8 +111,15 @@ func (s *ServerWorker) Consumer(ctx context.Context, appServer *model.AppServer 
 		ctx = setContextTraceId(ctx, header)
 
 		//Trace
-		ctx, span := tracer.Start(ctx, fmt.Sprintf("go-worker-ledger:%v - %v" , pixTransaction.ID, ctx.Value("trace-request-id") ))
-	
+		// Convert headers to carrier
+		carrier := propagation.MapCarrier{}
+		carrier["X-Amzn-Trace-Id"] = (*msg.Header)["X-Amzn-Trace-Id"]
+		carrier["TraceID"] = (*msg.Header)["TraceID"]
+		carrier["SpanID"] = (*msg.Header)["SpanID"]
+
+		parentCtx := otel.GetTextMapPropagator().Extract(ctx, carrier)
+		ctx, span := tracer.Start(parentCtx, "GO-WORKER-LEDGE")
+
 		// call service
 		_, err := s.workerService.PixTransactionAsync(ctx, &pixTransaction)
 		if err != nil {
@@ -123,6 +130,6 @@ func (s *ServerWorker) Consumer(ctx context.Context, appServer *model.AppServer 
 			childLogger.Info().Interface("trace-resquest-id", ctx.Value("trace-request-id")).Msg("COMMIT!!!!")
 		}
 
-		defer span.End()
+		span.End()
 	}
 }
