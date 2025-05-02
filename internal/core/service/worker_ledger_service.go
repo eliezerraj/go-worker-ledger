@@ -70,10 +70,13 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 	// Handle the transaction
 	defer func() {
 		if err != nil {
+			childLogger.Info().Interface("trace-request-id", trace_id ).Msg("ROLLBACK TX !!!")
 			tx.Rollback(ctx)
 		} else {
+			childLogger.Info().Interface("trace-request-id", trace_id ).Msg("COMMIT TX !!!")
 			tx.Commit(ctx)
 		}
+		childLogger.Info().Interface("trace-request-id", trace_id ).Msg("Release Conn !!!")
 		s.workerRepository.DatabasePGServer.ReleaseTx(conn)
 		span.End()
 	}()
