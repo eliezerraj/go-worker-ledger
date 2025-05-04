@@ -5,7 +5,8 @@ go 1.23.3
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.13
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30
-	github.com/eliezerraj/go-core v1.0.65
+	github.com/confluentinc/confluent-kafka-go/v2 v2.8.0
+	github.com/eliezerraj/go-core v1.0.74
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/joho/godotenv v1.5.1
@@ -28,7 +29,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18 // indirect
 	github.com/aws/smithy-go v1.22.3 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/confluentinc/confluent-kafka-go/v2 v2.8.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
