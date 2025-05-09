@@ -14,6 +14,8 @@ import(
 	"github.com/go-worker-ledger/internal/adapter/database"
 	"github.com/go-worker-ledger/internal/adapter/event"
 	"github.com/go-worker-ledger/internal/infra/server"
+
+	go_core_api "github.com/eliezerraj/go-core/api"
 	go_core_pg "github.com/eliezerraj/go-core/database/pg"  
 )
 
@@ -70,10 +72,15 @@ func main (){
 
 	// Database
 	database := database.NewWorkerRepository(&databasePGServer)
-	workerService := service.NewWorkerService(database, appServer.ApiService)
 
+	// Create a go-core api service for client http
+	coreRestApiService := go_core_api.NewRestApiService()
+	workerService := service.NewWorkerService(*coreRestApiService, database, appServer.ApiService)
+	
 	// Kafka
-	workerEvent, err := event.NewWorkerEvent(ctx, appServer.Topics, appServer.KafkaConfigurations)
+	workerEvent, err := event.NewWorkerEvent(ctx, 
+											appServer.Topics, 
+											appServer.KafkaConfigurations)
 	if err != nil {
 		childLogger.Error().Err(err).Msg("error open kafka")
 		panic(err)

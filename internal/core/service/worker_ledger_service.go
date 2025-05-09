@@ -22,16 +22,19 @@ var tracerProvider go_core_observ.TracerProvider
 var apiService go_core_api.ApiService
 
 type WorkerService struct {
+	goCoreRestApiService	go_core_api.ApiService
 	workerRepository *database.WorkerRepository
 	apiService		[]model.ApiService
 }
 
 // About create a new worker service
-func NewWorkerService(	workerRepository *database.WorkerRepository, 
+func NewWorkerService(	goCoreRestApiService	go_core_api.ApiService,	
+						workerRepository *database.WorkerRepository, 
 						apiService	[]model.ApiService) *WorkerService{
 	childLogger.Debug().Str("func","NewWorkerService").Send()
 
 	return &WorkerService{
+		goCoreRestApiService: goCoreRestApiService,
 		workerRepository: workerRepository,
 		apiService: apiService,
 	}
@@ -97,7 +100,8 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 		Headers: &headers,
 	}
 
-	res_payload, statusCode, err := apiService.CallRestApi(	ctx,
+	res_payload, statusCode, err := apiService.CallRestApiV1(ctx,
+															s.goCoreRestApiService.Client,
 															httpClient, 
 															nil)
 	if err != nil {
@@ -121,7 +125,8 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 		Headers: &headers,
 	}
 
-	res_payload, statusCode, err = apiService.CallRestApi(	ctx,
+	res_payload, statusCode, err = apiService.CallRestApiV1(ctx,
+															s.goCoreRestApiService.Client,
 															httpClient, 
 															nil)
 	if err != nil {
@@ -158,7 +163,8 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 								Amount:	pixTransaction.Amount,
 	}
 
-	_, statusCode, err = apiService.CallRestApi(ctx,
+	_, statusCode, err = apiService.CallRestApiV1(ctx,
+												s.goCoreRestApiService.Client,
 												httpClient, 
 												moviment)
 	if err != nil {
