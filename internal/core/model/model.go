@@ -8,12 +8,13 @@ import (
 )
 
 type AppServer struct {
-	InfoPod 		*InfoPod 					`json:"info_pod"`
-	ConfigOTEL		*go_core_observ.ConfigOTEL	`json:"otel_config"`
-	DatabaseConfig	*go_core_pg.DatabaseConfig  `json:"database"`
+	InfoPod 			*InfoPod 					`json:"info_pod"`
+	ConfigOTEL			*go_core_observ.ConfigOTEL	`json:"otel_config"`
+	DatabaseConfig		*go_core_pg.DatabaseConfig  `json:"database"`
 	KafkaConfigurations	*go_core_event.KafkaConfigurations  `json:"kafka_configurations"`
-	ApiService 		[]ApiService				`json:"api_endpoints"`
-	Topics 			[]string					`json:"topics"`	
+	CacheConfig			*CacheConfig				`json:"cache_config"`
+	ApiService 			[]ApiService				`json:"api_endpoints"`
+	Topics 				[]string					`json:"topics"`	
 }
 
 type ApiService struct {
@@ -22,6 +23,12 @@ type ApiService struct {
 	Method			string `json:"method"`
 	XApigwApiId		string `json:"x-apigw-api-id"`
 	HostName		string `json:"host_name"`
+}
+
+type CacheConfig struct {
+	Host		string `json:"host"`
+	Username	string `json:"username"`
+	Password	string `json:"password"`
 }
 
 type InfoPod struct {

@@ -13,8 +13,10 @@ import(
 	"github.com/go-worker-ledger/internal/adapter/database"
 	"github.com/go-worker-ledger/internal/core/model"
 	"github.com/go-worker-ledger/internal/core/erro"
+
 	go_core_observ "github.com/eliezerraj/go-core/observability"
 	go_core_api "github.com/eliezerraj/go-core/api"
+ 	go_core_cache "github.com/eliezerraj/go-core/cache/redis_cluster"
 )
 
 var childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.core.service").Logger()
@@ -23,20 +25,23 @@ var apiService go_core_api.ApiService
 
 type WorkerService struct {
 	goCoreRestApiService	go_core_api.ApiService
-	workerRepository *database.WorkerRepository
-	apiService		[]model.ApiService
+	workerRepository 		*database.WorkerRepository
+	workerCache				*go_core_cache.RedisClient
+	apiService				[]model.ApiService
 }
 
 // About create a new worker service
 func NewWorkerService(	goCoreRestApiService	go_core_api.ApiService,	
-						workerRepository *database.WorkerRepository, 
-						apiService	[]model.ApiService) *WorkerService{
+						workerRepository	 	*database.WorkerRepository,
+						workerCache				*go_core_cache.RedisClient,		 
+						apiService				[]model.ApiService) *WorkerService {
 	childLogger.Debug().Str("func","NewWorkerService").Send()
 
 	return &WorkerService{
 		goCoreRestApiService: goCoreRestApiService,
-		workerRepository: workerRepository,
-		apiService: apiService,
+		workerRepository: 	workerRepository,
+		workerCache: 		workerCache,
+		apiService: 		apiService,
 	}
 }
 
@@ -82,6 +87,30 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 		}	
 		span.End()
 	}()
+
+	// ------------------------  STEP-0 ----------------------------------//
+	ttl := 30 * time.Minute
+	key := pixTransaction.AccountFrom.AccountID + ":idepotent_status:" + pixTransaction.TransactionId
+
+	res_cache_value, err := s.workerCache.Get(ctx, key)
+	if err != nil {
+		childLogger.Info().Interface("key", key).Msg("idepotent key not found, register a new one")
+
+		res_cache, err := s.workerCache.Set(ctx, key, 500, ttl) //idepotent_status_code 500
+		if err != nil {
+			childLogger.Error().Err(err).Msg("Error Get Cached Key 500")
+		} else {
+			childLogger.Info().Str("func","PixTransactionAsync").Interface("res_cache", res_cache).Msg("REGISTER NEW IDEPOTENT KEY SUCCESSFUL !!!")
+		}
+	} else {
+		childLogger.Info().Str("func","PixTransactionAsync").Interface("res_cache_value", res_cache_value).Msg("IDEPOTENT KEY ALREADY EXISTS !!!")
+
+		if res_cache_value == "200" {
+			childLogger.Info().Str("func","PixTransactionAsync").Interface("res_cache_value", res_cache_value).Msg("IDEPOTENT KEY ALREADY PROCESSED WITH SUCCESSFUL !!!")
+		} else {
+			childLogger.Info().Str("func","PixTransactionAsync").Interface("res_cache_value", res_cache_value).Msg("IDEPOTENT KEY ALREADY EXISTS BUT PROCESSED WITH ERROR !!!")
+		}
+	}
 
 	// ------------------------  STEP-1 ----------------------------------//
 	childLogger.Info().Str("func","PixTransactionAsync").Msg("===> STEP - 01 (ACCOUNT FROM) <===")
@@ -191,5 +220,13 @@ func (s WorkerService) PixTransactionAsync(ctx context.Context, pixTransaction *
 		return nil, err
 	}
 
+	//update idepotent status
+	res_cache, err := s.workerCache.Set(ctx, key, 200, ttl) //idepotent_status_code 200
+	if err != nil {
+		childLogger.Error().Err(err).Msg("ERROR UPDATE IDEPOTENT_KEY UNSUCESSFULL !!!")
+	} else {
+		childLogger.Info().Str("func","PixTransactionAsync").Interface("res_cache", res_cache).Msg("UPDATE IDEPOTENT_KEY SUCESSFULL !")
+	}
+	
 	return pixTransaction, nil
 }

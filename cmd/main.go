@@ -4,6 +4,7 @@ import(
 	"time"
 	"context"
 	"sync"
+	"crypto/tls"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -16,15 +17,18 @@ import(
 	"github.com/go-worker-ledger/internal/infra/server"
 
 	go_core_api "github.com/eliezerraj/go-core/api"
-	go_core_pg "github.com/eliezerraj/go-core/database/pg"  
+	go_core_pg "github.com/eliezerraj/go-core/database/pg"
+	go_core_cache "github.com/eliezerraj/go-core/cache/redis_cluster"
+
+	redis "github.com/redis/go-redis/v9"
 )
 
 var(
 	logLevel = 	zerolog.InfoLevel // zerolog.InfoLevel zerolog.DebugLevel
-	appServer	model.AppServer
-	databaseConfig go_core_pg.DatabaseConfig
-	databasePGServer go_core_pg.DatabasePGServer
 	childLogger = log.With().Str("component","go-worker-ledger").Str("package", "main").Logger()
+	appServer			model.AppServer
+	databaseConfig		go_core_pg.DatabaseConfig
+	databasePGServer 	go_core_pg.DatabasePGServer
 )
 
 func init(){
@@ -35,13 +39,15 @@ func init(){
 	infoPod := configuration.GetInfoPod()
 	configOTEL 		:= configuration.GetOtelEnv()
 	databaseConfig 	:= configuration.GetDatabaseEnv() 
-	apiService 	:= configuration.GetEndpointEnv() 
+	apiService 		:= configuration.GetEndpointEnv()
+	cacheConfig 	:= configuration.GetCacheEnv()
 	kafkaConfigurations, topics := configuration.GetKafkaEnv() 
 
 	appServer.InfoPod = &infoPod
 	appServer.ConfigOTEL = &configOTEL
 	appServer.DatabaseConfig = &databaseConfig
 	appServer.ApiService = apiService
+	appServer.CacheConfig = &cacheConfig
 	appServer.KafkaConfigurations = &kafkaConfigurations
 	appServer.Topics = topics
 }
@@ -70,12 +76,37 @@ func main (){
 		break
 	}
 
+	// Open Valkey
+	var redisClientCache 	go_core_cache.RedisClient
+	var optRedisClient		redis.Options
+
+	optRedisClient.Username = appServer.CacheConfig.Username
+	optRedisClient.Password = appServer.CacheConfig.Password
+	optRedisClient.Addr = appServer.CacheConfig.Host
+
+	if true {
+		optRedisClient.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+	workerCache := redisClientCache.NewRedisClientCache(&optRedisClient)
+
+	_, err = workerCache.Ping(context.Background())
+	if err != nil {
+		childLogger.Error().Err(err).Msg("Failed to ping redis")
+	} else {
+		childLogger.Info().Str("func","main").Msg("Valkey Ping Succesfull !!!")
+	}
+
 	// Database
-	database := database.NewWorkerRepository(&databasePGServer)
+	workerRepository := database.NewWorkerRepository(&databasePGServer)
 
 	// Create a go-core api service for client http
 	coreRestApiService := go_core_api.NewRestApiService()
-	workerService := service.NewWorkerService(*coreRestApiService, database, appServer.ApiService)
+	workerService := service.NewWorkerService(	*coreRestApiService, 
+												workerRepository,
+												workerCache,
+												appServer.ApiService)
 	
 	// Kafka
 	workerEvent, err := event.NewWorkerEvent(ctx, 
