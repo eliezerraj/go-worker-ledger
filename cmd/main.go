@@ -4,7 +4,10 @@ import(
 	"time"
 	"context"
 	"sync"
+	"os"
 	"crypto/tls"
+	"os/signal"
+	"syscall"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -55,7 +58,11 @@ func init(){
 func main (){
 	childLogger.Info().Str("func","main").Interface("appServer",appServer).Send()
 
-	ctx := context.Background()
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	// Open Database
 	count := 1
