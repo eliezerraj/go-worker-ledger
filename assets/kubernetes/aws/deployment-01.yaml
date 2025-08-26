@@ -60,7 +60,7 @@ spec:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 3
             periodSeconds: 30
             failureThreshold: 3
             successThreshold: 1
@@ -76,6 +76,10 @@ spec:
             failureThreshold: 3
             successThreshold: 1
             timeoutSeconds: 5
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh","-c","sleep 5"]
       terminationGracePeriodSeconds: 60
       affinity:
         podAntiAffinity:
@@ -86,10 +90,3 @@ spec:
                   matchLabels:
                     app: *app-name
               weight: 100
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                - key: karpenter.sh/capacity-type
-                  operator: "In"
-                  values: ["spot"]
