@@ -79,7 +79,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/bin/sh","-c","sleep 2"]
+              command: ["/bin/sh","-c","sleep 5"]
       terminationGracePeriodSeconds: 60
       affinity:
         podAntiAffinity:
@@ -90,10 +90,3 @@ spec:
                   matchLabels:
                     app: *app-name
               weight: 100
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                - key: karpenter.sh/capacity-type
-                  operator: "In"
-                  values: ["spot"]
