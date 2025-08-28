@@ -14,13 +14,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.adapter.database").Logger()
-var tracerProvider go_core_observ.TracerProvider
+var (
+	childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.adapter.database").Logger()
+	tracerProvider go_core_observ.TracerProvider
+)
 
 type WorkerRepository struct {
 	DatabasePGServer *go_core_pg.DatabasePGServer
 }
 
+// About NewWorkerRepository
 func NewWorkerRepository(databasePGServer *go_core_pg.DatabasePGServer) *WorkerRepository{
 	childLogger.Info().Msg("NewWorkerRepository")
 
@@ -29,6 +32,7 @@ func NewWorkerRepository(databasePGServer *go_core_pg.DatabasePGServer) *WorkerR
 	}
 }
 
+// About create GetTransactionUUID
 func (w WorkerRepository) GetTransactionUUID(ctx context.Context) (*string, error){
 	childLogger.Info().Interface("trace-resquest-id", ctx.Value("trace-request-id")).Msg("GetTransactionUUID")
 	

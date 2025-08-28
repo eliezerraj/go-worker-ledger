@@ -22,12 +22,13 @@ import (
 	go_core_event "github.com/eliezerraj/go-core/event/kafka" 
 )
 
-var childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.infra.server").Logger()
-
-var tracerProvider go_core_observ.TracerProvider
-var consumerWorker go_core_event.ConsumerWorker
-var infoTrace go_core_observ.InfoTrace
-var tracer 			trace.Tracer
+var ( 
+	childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.infra.server").Logger()
+	tracerProvider go_core_observ.TracerProvider
+	consumerWorker go_core_event.ConsumerWorker
+	infoTrace go_core_observ.InfoTrace
+	tracer 			trace.Tracer
+)
 
 type ServerWorker struct {
 	workerService 	*service.WorkerService

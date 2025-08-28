@@ -14,7 +14,7 @@ data:
   DB_NAME: "postgres"
   DB_SCHEMA: "public"
   DB_DRIVER: "postgres"
-  DB_MAX_CONNECTION: "30"
+  DB_MAX_CONNECTION: "5"
   SETPOD_AZ: "false"
   ENV: "dev"
 

@@ -9,16 +9,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.adapter.event").Logger()
-
-var tracerProvider go_core_observ.TracerProvider
-var consumerWorker go_core_event.ConsumerWorker
+var (
+	childLogger = log.With().Str("component","go-worker-ledger").Str("package","internal.adapter.event").Logger()
+	tracerProvider go_core_observ.TracerProvider
+	consumerWorker go_core_event.ConsumerWorker
+)
 
 type WorkerEvent struct {
 	Topics	[]string
 	WorkerKafka *go_core_event.ConsumerWorker 
 }
 
+// About NewWorkerEvent
 func NewWorkerEvent(ctx context.Context, topics []string, kafkaConfigurations *go_core_event.KafkaConfigurations) (*WorkerEvent, error) {
 	childLogger.Info().Str("func","NewWorkerEvent").Send()
 
@@ -26,6 +28,7 @@ func NewWorkerEvent(ctx context.Context, topics []string, kafkaConfigurations *g
 	span := tracerProvider.Span(ctx, "adapter.event.NewWorkerEvent")
 	defer span.End()
 
+	// create consumer worker
 	workerKafka, err := consumerWorker.NewConsumerWorker(kafkaConfigurations)
 	if err != nil {
 		return nil, err
